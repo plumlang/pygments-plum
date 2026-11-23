@@ -34,9 +34,9 @@ def test_found_programs():
     "path", PROGRAMS, ids=lambda p: str(p.relative_to(p.parents[2]))
 )
 def test_program(path):
-    # newline="" keeps any \r\n; "replace" keeps the invalid-UTF-8 test file
-    # readable (as Pygments itself does with encoding="guess").
-    text = path.read_text(encoding="utf-8", errors="replace", newline="")
+    # Decoding the bytes keeps any \r\n; "replace" keeps the invalid-UTF-8
+    # test file readable (as Pygments itself does with encoding="guess").
+    text = path.read_bytes().decode("utf-8", errors="replace")
     lexer = PlumLexer(stripnl=False, ensurenl=False)
     tokens = list(lexer.get_tokens(text))
 
