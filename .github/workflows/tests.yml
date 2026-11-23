@@ -1,0 +1,105 @@
+# Runs the tests on the oldest and newest supported Python, against the
+# newest Pygments and the oldest one the package allows, then once more over
+# every program in a Plumlang checkout, and checks the package builds.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Python ${{ matrix.python }}, Pygments ${{ matrix.pygments }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.10"
+            pygments: "2.13.0"
+          - python: "3.10"
+            pygments: latest
+          - python: "3.12"
+            pygments: latest
+          - python: "3.14"
+            pygments: latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install the package and pytest
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[test]'
+          if [ "${{ matrix.pygments }}" != latest ]; then
+            python -m pip install "pygments==${{ matrix.pygments }}"
+          fi
+          python -c 'import pygments; print("Pygments", pygments.__version__)'
+
+      - name: Run the tests
+        run: python -m pytest -v
+
+  plumlang:
+    name: Every program in plumlang/plumlang
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check out Plumlang (for its examples and language tests)
+        uses: actions/checkout@v4
+        with:
+          repository: plumlang/plumlang
+          path: plumlang
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install the package and pytest
+        run: python -m pip install -e '.[test]'
+
+      - name: Run the tests over the checkout too
+        env:
+          PLUM_SOURCE: plumlang
+        run: python -m pytest -q tests/test_examples.py
+
+  build:
+    name: Build and check the distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Build
+        run: |
+          python -m pip install build twine
+          python -m build
+          python -m twine check --strict dist/*
+
+      - name: Install the wheel and find the lexer
+        run: |
+          python -m venv /tmp/wheel-venv
+          /tmp/wheel-venv/bin/pip install dist/*.whl
+          echo 'plant x = 1' | /tmp/wheel-venv/bin/pygmentize -l plum -f raw
