@@ -1,0 +1,10 @@
+# Virtual environments and caches
+/.venv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Build output
+/build
+/dist
+*.egg-info/

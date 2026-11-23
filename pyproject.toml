@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pygments-plum"
+dynamic = ["version"]
+description = "Plumlang lexer plugin for Pygments: highlighting in Sphinx, MkDocs and anything else that uses Pygments"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.10"
+authors = [{ name = "Elixpo and the Plumlang contributors", email = "hello@elixpo.com" }]
+keywords = ["pygments", "lexer", "syntax highlighting", "plumlang", "plum"]
+# 2.13 is the first Pygments that finds plugins with importlib.metadata;
+# 2.12 needs pkg_resources, which current setuptools and Python no longer ship.
+dependencies = ["pygments>=2.13"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Plugins",
+    "Framework :: Sphinx :: Extension",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Text Processing :: Filters",
+    "Topic :: Text Processing :: Markup",
+]
+
+[project.urls]
+Homepage = "https://plum.elixpo.com"
+Source = "https://github.com/plumlang/pygments-plum"
+Issues = "https://github.com/plumlang/pygments-plum/issues"
+Plumlang = "https://github.com/plumlang/plumlang"
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+# Pygments finds the lexer through this entry point: `pygmentize -l plum`,
+# `get_lexer_by_name("plum")`, Sphinx and MkDocs all use it.
+[project.entry-points."pygments.lexers"]
+plum = "pygments_plum:PlumLexer"
+
+[tool.hatch.version]
+path = "pygments_plum/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["pygments_plum", "tests", "LICENSE", "NOTICE", "README.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
