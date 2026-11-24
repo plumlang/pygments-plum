@@ -2,7 +2,10 @@
 
 Every keyword in the lexer's list is a keyword here; sample.plum lexes
 without Error tokens and round-trips; and every token `plum tokens` reports
-in it has the right type, with comments and `#` in strings.
+in it has the right type, with comments (`#`, `##` doc comments and nested
+`#[ ... ]#` block comments) and `#` in strings. Tokens inside block comments
+are left out of the `plum tokens` check, so a `plum` older than block
+comments (it reads them as code) still checks the rest.
 
 The files come from the folder in $PLUM_HIGHLIGHT (e.g.
 ../plumlang/tests/highlight), or else from plumlang's main branch; the
@@ -74,10 +77,10 @@ def types_by_offset(text):
 
 
 def hashes(text):
-    """Offsets of the `#`s that start comments, and of those in strings:
-    following strings, escapes, \"\"\" strings and {interpolation} with
-    nested brackets."""
-    comments, in_strings, mode = [], [], []
+    """Offsets of the `#`s that start comments, of those in strings, and of
+    every character of block comments: following strings, escapes, \"\"\"
+    strings, {interpolation} with nested brackets and nested #[ ]#."""
+    comments, in_strings, in_blocks, mode = [], [], set(), []
     i = 0
     while i < len(text):
         c, top = text[i], (mode[-1] if mode else None)
@@ -96,6 +99,23 @@ def hashes(text):
                 i += 2
             elif top == "s" and c == '"':
                 mode.pop()
+        elif text.startswith("#[", i):
+            comments.append(i)
+            depth = 0
+            while i < len(text):
+                if text.startswith("#[", i):
+                    depth += 1
+                    in_blocks.update((i, i + 1))
+                    i += 1
+                elif text.startswith("]#", i):
+                    depth -= 1
+                    in_blocks.update((i, i + 1))
+                    i += 1
+                    if depth == 0:
+                        break
+                else:
+                    in_blocks.add(i)
+                i += 1
         elif c == "#":
             comments.append(i)
             while i + 1 < len(text) and text[i + 1] != "\n":
@@ -110,14 +130,21 @@ def hashes(text):
         elif c in "})]" and mode:
             mode.pop()
         i += 1
-    return comments, in_strings
+    return comments, in_strings, in_blocks
+
+
+def is_comment(token):
+    return token in Comment or token in String.Doc
 
 
 def test_comments(sample):
     types = types_by_offset(sample)
-    comments, in_strings = hashes(sample)
+    comments, in_strings, in_blocks = hashes(sample)
     assert comments and in_strings
-    assert [i for i in comments if types[i] not in Comment] == []
+    assert [i for i in comments if not is_comment(types[i])] == []
+    assert sorted(i for i in in_blocks if types[i] not in Comment.Multiline) == []
+    doc = [i for i in comments if sample.startswith("##", i) and not sample.startswith("###", i)]
+    assert [i for i in doc if types[i] not in String.Doc] == []
     assert [i for i in in_strings if types[i] not in String] == []
 
 
@@ -130,6 +157,7 @@ def test_tokens_as_plum_reads_them(sample, tmp_path):
     out = subprocess.run([plum, "tokens", str(path)], capture_output=True, text=True,
                          check=True).stdout
     types = types_by_offset(sample)
+    in_blocks = hashes(sample)[2]
     line_start = [0]
     for line in sample.split("\n"):
         line_start.append(line_start[-1] + len(line) + 1)
@@ -141,6 +169,8 @@ def test_tokens_as_plum_reads_them(sample, tmp_path):
             continue
         line, col = (int(n) for n in at.split(":"))
         offset = line_start[line - 1] + col - 1  # columns count code points
+        if offset in in_blocks:
+            continue
         token = types[offset]
         if kind in ("INT", "FLOAT"):
             ok = token in Number
@@ -151,7 +181,7 @@ def test_tokens_as_plum_reads_them(sample, tmp_path):
         elif kind not in ("IDENT", "UNDERSCORE", "ERROR") and sample[offset].islower():
             ok = is_keyword(token)
         else:
-            ok = token not in String and token not in Comment
+            ok = token not in String and not is_comment(token)
         if not ok:
             wrong.append(f"{at} {kind} {' '.join(value)}: {token}")
     assert wrong == []

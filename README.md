@@ -22,7 +22,10 @@ It highlights:
   whose expression is highlighted like any other code, with format specs
   (`{total:.2}`, `{n:>5}`); `"""` strings across lines.
 - **Numbers** in every form (`1_000`, `0xFF`, `0o755`, `0b1010`, `6.022e23`),
-  operators, punctuation and `#` comments.
+  operators and punctuation.
+- **Comments**: `#` lines (`Comment.Single`), `#[ ... ]#` block comments,
+  nested and across lines (`Comment.Multiline`), and `##` doc comments
+  (`String.Doc`, as Pygments' Rust and Nim lexers have them).
 
 The rules follow the reference lexer in
 [plumlang/plumlang](https://github.com/plumlang/plumlang). The lexer never
