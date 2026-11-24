@@ -30,7 +30,7 @@ from pygments.token import (
     Whitespace,
 )
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 __all__ = ["PlumLexer"]
 
 IDENT = r"[A-Za-z_][A-Za-z0-9_]*"
