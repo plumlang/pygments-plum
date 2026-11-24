@@ -7,7 +7,8 @@
     The rules follow the reference lexer in plumlang/plumlang
     (src/lexer/lexer.c): its keyword table, number forms, strings with
     ``{...}`` interpolation and ``:format`` specs, ``\"\"\"`` strings that
-    span lines, and ``#`` line comments.
+    span lines, ``#`` line comments, ``##`` doc comments and ``#[ ... ]#``
+    block comments, which nest.
 
     Where the compiler reports an error (``&&``, ``;``, ``'single'``
     quotes, a bad escape) the lexer still highlights the text sensibly
@@ -30,7 +31,7 @@ from pygments.token import (
     Whitespace,
 )
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __all__ = ["PlumLexer"]
 
 IDENT = r"[A-Za-z_][A-Za-z0-9_]*"
@@ -74,6 +75,9 @@ class PlumLexer(RegexLexer):
         ],
         "expr": [
             (r"\s+", Whitespace),
+            (r"#\[", Comment.Multiline, "block-comment"),
+            # `##` lines document the declaration after them; `###` doesn't.
+            (r"##(?!#)[^\n]*", String.Doc),
             (r"#[^\n]*", Comment.Single),
 
             # Strings. `"""` first, so it isn't read as an empty string.
@@ -134,6 +138,14 @@ class PlumLexer(RegexLexer):
 
             # Anything else (stray or non-ASCII characters outside strings).
             (r".", Text),
+        ],
+        # `#[ ... ]#`: each `#[` inside needs its own `]#`; nothing else,
+        # strings included, means anything.
+        "block-comment": [
+            (r"#\[", Comment.Multiline, "#push"),
+            (r"\]#", Comment.Multiline, "#pop"),
+            (r"[^#\]]+", Comment.Multiline),
+            (r"[#\]]", Comment.Multiline),
         ],
         "seed": [
             (r"[ \t]+", Whitespace),

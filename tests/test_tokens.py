@@ -281,6 +281,39 @@ def test_comment():
     ]
 
 
+def test_block_comment_nests_and_spans_lines():
+    assert lex('#[ a\n  #[ nested ]# "b" plant\n]# plant x = #[ c ]# 1') == [
+        (Comment.Multiline, '#[ a\n  #[ nested ]# "b" plant\n]#'),
+        (Keyword.Declaration, "plant"),
+        (Name.Variable, "x"),
+        (Operator, "="),
+        (Comment.Multiline, "#[ c ]#"),
+        (Number.Integer, "1"),
+    ]
+
+
+def test_unclosed_block_comment_runs_to_the_end():
+    assert lex("#[ open #[ ]#\nplant x = 1\n") == [
+        (Comment.Multiline, "#[ open #[ ]#\nplant x = 1\n"),
+    ]
+
+
+def test_doc_comment():
+    # (lex() merges neighbouring tokens of a type: the two ## lines are two)
+    assert [t for t in PlumLexer().get_tokens("## Adds *two*.\n##\n") if t[0] is String.Doc] == [
+        (String.Doc, "## Adds *two*."),
+        (String.Doc, "##"),
+    ]
+    assert lex("### not a doc\n##[ a doc ]#") == [
+        (Comment.Single, "### not a doc"),
+        (String.Doc, "##[ a doc ]#"),
+    ]
+
+
+def test_comment_markers_in_strings():
+    assert lex('"#[ no ]# ## no"') == [(String.Double, '"#[ no ]# ## no"')]
+
+
 def test_hash_in_string_is_not_a_comment():
     assert lex('drop("#1 {n} # not a comment")  # a comment') == [
         (Name.Builtin, "drop"),
