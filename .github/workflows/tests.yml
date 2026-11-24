@@ -69,6 +69,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: plumlang/plumlang
+          ref: lang/issue-161
           path: plumlang
           persist-credentials: false
 
