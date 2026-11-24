@@ -127,6 +127,18 @@ test over a full Plumlang checkout as well, point `PLUM_SOURCE` at it:
 PLUM_SOURCE=../plumlang .venv/bin/pytest
 ```
 
+`tests/test_sample.py` checks the lexer against Plumlang's shared
+highlighting sample ([`tests/highlight/`](https://github.com/plumlang/plumlang/tree/main/tests/highlight),
+downloaded from `main`, or the folder in `PLUM_HIGHLIGHT`): every keyword in
+the lexer is a keyword here, `sample.plum` has no `Error` token and
+round-trips, and, with `plum` installed, every token `plum tokens` reports
+has the right type. CI runs it on every push and weekly, so a keyword added
+to Plumlang fails here until the lexer knows it.
+
+```sh
+PLUM_HIGHLIGHT=../plumlang/tests/highlight .venv/bin/pytest tests/test_sample.py
+```
+
 ## Links
 
 - Plumlang: <https://plum.elixpo.com>
